@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import {
   CButton,
   CCard,
@@ -15,7 +15,6 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilLockLocked, cilUser } from '@coreui/icons'
-import { useLocation } from 'react-router-dom'
 
 const Login = () => {
   const location = useLocation()
@@ -24,10 +23,18 @@ const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
   const handleLogin = async (e) => {
     e.preventDefault()
+    setLoading(true)
+
+    if (!email || !password) {
+      setError('Email y contraseña son obligatorios')
+      setLoading(false)
+      return
+    }
 
     try {
       const response = await fetch('http://localhost:3001/api/login', {
@@ -41,7 +48,12 @@ const Login = () => {
       const data = await response.json()
 
       if (response.ok) {
-        // Si la respuesta es correcta, navegar a /home
+        // Almacenar el token JWT y el userId en localStorage
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('userId', data.user._id) // Ajusta si el userId es diferente
+        console.log('Token y userId almacenados:', data.token, data.user._id)
+
+        // Navegar al componente deseado
         navigate('/welcome-login')
       } else {
         setError(data.message || 'Error al iniciar sesión')
@@ -49,6 +61,8 @@ const Login = () => {
     } catch (err) {
       console.error('Error en la autenticación:', err)
       setError('Hubo un problema con el servidor')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -64,6 +78,7 @@ const Login = () => {
                     <h1>Login</h1>
                     <p className="text-body-secondary">Ingresa a tu cuenta</p>
                     {successMessage && <p className="text-success">{successMessage}</p>}
+                    {error && <p className="text-danger">{error}</p>}
                     <CInputGroup className="mb-3">
                       <CInputGroupText>
                         <CIcon icon={cilUser} />
@@ -87,12 +102,10 @@ const Login = () => {
                         onChange={(e) => setPassword(e.target.value)}
                       />
                     </CInputGroup>
-                    {error && <p className="text-danger">{error}</p>}{' '}
-                    {/* Mostrar error si existe */}
                     <CRow>
                       <CCol xs={6}>
-                        <CButton color="primary" className="px-4" type="submit">
-                          Login
+                        <CButton color="primary" className="px-4" type="submit" disabled={loading}>
+                          {loading ? 'Cargando...' : 'Login'}
                         </CButton>
                       </CCol>
                       <CCol xs={6} className="text-right">
